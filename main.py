@@ -30,7 +30,7 @@ valid_batch_size = 50
 test_batch_size = 50
 
 le_ra = 0.0001
-nombre_epochs = 100
+nombre_epochs = 1
 
 train_loader = torch.utils.data.DataLoader(train_set,
     batch_size=batch_size, shuffle=True)
@@ -59,33 +59,61 @@ class FcNetwork(nn.Module):
     hidden_layer_size = 1000
     def __init__(self):
         super().__init__()
-        self.dconv1 = nn.Conv2d(1, self.ch_dconv1, kernel_size=3, padding=1, stride=2)
-        self.dconv2 = nn.Conv2d(self.ch_dconv1, self.ch_dconv2, kernel_size=3, padding=1, stride=2)
-        #self.dconv3= nn.Conv2d(self.ch_dconv2, self.ch_dconv3, kernel_size=3, padding=1)
-        self.drop = nn.Dropout2d()
+        # Arch 1
+        #self.dconv1 = nn.Conv2d(1, self.ch_dconv1, kernel_size=3, padding=1, stride=2)
+        #self.dconv2 = nn.Conv2d(self.ch_dconv1, self.ch_dconv2, kernel_size=3, padding=1, stride=2)
+        #self.drop = nn.Dropout2d()
+        #self.upsamp = nn.Upsample(scale_factor=2, mode='nearest')
+        #self.uconv1 = nn.ConvTranspose2d(self.ch_dconv2, self.ch_uconv2, kernel_size=3, padding=1)
+        #self.uconv2 = nn.ConvTranspose2d(self.ch_uconv2, self.ch_uconv3, kernel_size=3, padding=1)
+
+        # Arch 2
+        self.d1 = nn.Conv2d(1, 8, kernel_size=3, padding=0, stride=1)
+        self.d2 = nn.Conv2d(8, 16, kernel_size=3, padding=0, stride=1)
+        self.d3 = nn.Conv2d(16, 32, kernel_size=3, padding=1, stride=2)
+        self.d4 = nn.Conv2d(32, 32, kernel_size=3, padding=1, stride=2)
+        self.d5 = nn.Conv2d(32, 32, kernel_size=3, padding=1, stride=2)
+
         self.upsamp = nn.Upsample(scale_factor=2, mode='nearest')
-        self.uconv1 = nn.ConvTranspose2d(self.ch_dconv2, self.ch_uconv2, kernel_size=3, padding=1)
-        self.uconv2 = nn.ConvTranspose2d(self.ch_uconv2, self.ch_uconv3, kernel_size=3, padding=1)
-        #self.uconv3 = nn.ConvTranspose2d(self.ch_uconv2, self.ch_uconv3, kernel_size=3, padding=1)
+        self.u5 = nn.ConvTranspose2d(32, 32, kernel_size=3, padding=1)
+        self.u4 = nn.ConvTranspose2d(32, 32, kernel_size=3, padding=1)
+        self.u3 = nn.ConvTranspose2d(32, 16, kernel_size=3, padding=1)
+        self.u2 = nn.ConvTranspose2d(16, 8, kernel_size=3, padding=0)
+        self.u1 = nn.ConvTranspose2d(8, 1, kernel_size=3, padding=0)
+
 
     def forward(self, image):
+        # Arch 1
         # Encodeur
-        x = F.relu(self.dconv1(image))
-        x = F.relu(self.dconv2(x))
+        #x = F.relu(self.dconv1(image))
+        #x = F.relu(self.dconv2(x))
 
         # Decodeur
-        x = self.upsamp(x)
-        x = F.relu(self.uconv1(x))
-        x = self.upsamp(x)
-        x = F.tanh(self.uconv2(x))
+        #x = self.upsamp(x)
+        #x = F.relu(self.uconv1(x))
+        #x = self.upsamp(x)
+        #x = F.tanh(self.uconv2(x))
 
+        # Arch 2
+        # Encodeur
+        x = F.relu(self.d1(image))
+        x = F.relu(self.d2(x))
+        x = F.relu(self.d3(x))
+        x = F.relu(self.d4(x))
+        x = F.relu(self.d5(x))
+        # Décodeur
+        x = F.relu(self.u5(self.upsamp(x)))
+        x = F.relu(self.u4(self.upsamp(x)))
+        x = F.relu(self.u3(self.upsamp(x)))
+        x = F.relu(self.u2(x))
+        x = F.tanh(self.u1(x))
         return x
 
 def train(model, train_loader, optimizer, epoch):
     model.train()
     epoch_loss = 0
     for batch_idx, (data, target) in enumerate(train_loader):
-        data = Variable(data).cuda()
+        data = Variable(data)
         optimizer.zero_grad()
         output = model(data)  # calls the forward function
         loss = nn.MSELoss()(output, data)
@@ -103,7 +131,7 @@ def valid(model, valid_loader) :
     model.eval()
     valid_loss = 0
     for data, target in valid_loader:
-        data, target = Variable(data, volatile=True).cuda() , Variable(target).cuda()
+        data, target = Variable(data, volatile=True), Variable(target)
         output = model(data)
         valid_loss += nn.MSELoss()(output, data)
     valid_loss /= len(valid_loader.dataset)
@@ -113,11 +141,11 @@ def test(model, test_loader, noise):
     model.eval()
     test_loss = 0
     for test_data, _ in test_loader:
-        test_data = Variable(test_data, volatile=True).cuda()
+        test_data = Variable(test_data, volatile=True)
         pic = to_img(test_data.cpu().data)
         save_image(pic, './dc_img/test_imageOriginalInput.png')
         if noise :
-            test_data = test_data + Variable(torch.randn(test_data.size()).cuda() * 1)
+            test_data = test_data + Variable(torch.randn(test_data.size()) * 1)
         output = model.forward(test_data)
         test_loss += nn.MSELoss()(output, test_data).data[0]
         pic = to_img(output.cpu().data)
@@ -156,7 +184,7 @@ def experiment(model, epochs=nombre_epochs, lr=le_ra):
 best_loss = 0
 best_model = []
 for model in [FcNetwork()] :
-    model.cuda()
+    model
     best_model, best_loss = experiment(model)
     # if precision > best_precision:
     #     best_precision = precision
