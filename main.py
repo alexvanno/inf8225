@@ -71,7 +71,7 @@ class FcNetwork(nn.Module):
     def forward(self, image):
         # Encodeur
         x = F.relu(self.dconv1(image))
-        x = F.relu(self.dconv2(self.drop(x)))
+        x = F.relu(self.dconv2(x))
 
         # Decodeur
         x = self.upsamp(x)
