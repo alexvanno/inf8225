@@ -14,7 +14,6 @@ from torch.utils.data.sampler import SubsetRandomSampler
 import numpy as np
 import random
 
-
 root = './data'
 download = True
 
@@ -30,8 +29,8 @@ batch_size = 100
 valid_batch_size = 100
 test_batch_size = 50
 
-le_ra = 0.0001
-nombre_epochs = 100
+le_ra = 0.000001
+nombre_epochs = 200
 
 oneall = (torch.ones(10000)).byte()
 sampler = (torch.round(torch.rand(10000))).byte()
@@ -221,9 +220,8 @@ def experiment(model, epochs=nombre_epochs, lr=le_ra):
     losses = []
     v_losses = []
 
-    #optimizer = optim.Adam(model.parameters(), lr=lr)
-    optimizer = optim.SGD(model.parameters(), lr=lr)
-
+    optimizer = optim.Adam(model.parameters(), lr=lr)
+    #optimizer = optim.SGD(model.parameters(), lr=lr)
 
     for epoch in range(1, epochs + 1):
         model, epoch_loss = train(model, train_loader, optimizer, epoch)
@@ -236,7 +234,7 @@ def experiment(model, epochs=nombre_epochs, lr=le_ra):
             best_model = model
     r = np.arange(0, epochs)
     plt.plot(r, losses, r, v_losses)
-    plt.title("Loss architecture 4\n{} epochs et LR = {}".format(epochs, lr))
+    plt.title("Loss architecture 3\n{} epochs et LR = {}".format(epochs, lr))
     plt.xlabel("Epochs")
     plt.ylabel("Loss")
     plt.show()
@@ -248,7 +246,4 @@ best_model = []
 for model in [FcNetwork(3)] :
     model.cuda()
     best_model, best_loss = experiment(model)
-    # if precision > best_precision:
-    #     best_precision = precision
-    #     best_model = model
 test_loss = test(model, test_loader, noise=True)
