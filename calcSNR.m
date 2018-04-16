@@ -1,3 +1,4 @@
+clear; clc;
 archList4 = {'arch1', 'arch2', 'arch3', 'arch4'};
 for i = 1:length(archList4)
     % Get images
@@ -16,6 +17,11 @@ for i = 1:length(archList4)
     
     stdNoise(i) = std(difNoise(input==0));
     stdOutput(i) = std(difOutput(input==0));
+    
+    rNoise(i) = corr2(input, inputNoise);
+    rOutput(i) = corr2(input, output);
+    
+    % http://journals.plos.org/plosone/article?id=10.1371/journal.pone.0154160
 end
 
 archList5 = {'arch3'};
@@ -34,6 +40,9 @@ for i = 1:length(archList5)
     avgNoise(end+1) = sum(sum(difNoise))/50;
     avgOutput(end+1) = sum(sum(difOutput))/50;
     
-    stdNoise(end+i) = std(difNoise(input==0));
-    stdOutput(end+i) = std(difOutput(input==0));
+    stdNoise(end+1) = std(difNoise(input==0));
+    stdOutput(end+1) = std(difOutput(input==0));
+    
+    rNoise(end+1) = corr2(input, inputNoise);
+    rOutput(end+1) = corr2(input, output);
 end
