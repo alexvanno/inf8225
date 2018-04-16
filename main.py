@@ -30,7 +30,7 @@ batch_size = 100
 valid_batch_size = 100
 test_batch_size = 50
 
-le_ra = 0.00001
+le_ra = 0.0001
 nombre_epochs = 100
 
 oneall = (torch.ones(10000)).byte()
@@ -65,14 +65,14 @@ def to_img(x):
 class FcNetwork(nn.Module):
     ch_dconv1 = 16
     ch_dconv2 = 32
-    #ch_dconv3 = 30
-    #ch_uconv1 = 20
     ch_uconv2 = 16
     ch_uconv3 = 1
 
     hidden_layer_size = 1000
-    def __init__(self):
+    def __init__(self, arch):
         super().__init__()
+        self.arch = arch
+        assert self.arch < 5
         # Arch 1
         self.dconv1 = nn.Conv2d(1, self.ch_dconv1, kernel_size=3, padding=1, stride=2)
         self.dconv2 = nn.Conv2d(self.ch_dconv1, self.ch_dconv2, kernel_size=3, padding=1, stride=2)
@@ -107,58 +107,61 @@ class FcNetwork(nn.Module):
 
 #A mettre quand on herite __init__ __len__ __getItem__
     def forward(self, image):
-        # # Arch 1
-        # # Encodeur
-        # x = F.relu(self.dconv1(image))
-        # x = F.relu(self.dconv2(x))
-        #
-        # # Decodeur
-        # x = self.upsamp(x)
-        # x = F.relu(self.uconv1(x))
-        # x = self.upsamp(x)
-        # x = F.tanh(self.uconv2(x))
+        if (self.arch == 1) :
+            # Arch 1
+            # Encodeur
+            x = F.relu(self.dconv1(image))
+            x = F.relu(self.dconv2(x))
 
-        # # Arch 2
-        # # Encodeur
-        # x = F.relu(self.d1(image))
-        # x = F.relu(self.d2(x))
-        # x = F.relu(self.d3(x))
-        # x = F.relu(self.d4(x))
-        # # Décodeur
-        # x = F.relu(self.u4(self.upsamp(x)))
-        # x = F.relu(self.u3(self.upsamp(x)))
-        # x = F.relu(self.u2(x))
-        # x = F.tanh(self.u1(x))
+            # Decodeur
+            x = self.upsamp(x)
+            x = F.relu(self.uconv1(x))
+            x = self.upsamp(x)
+            x = F.tanh(self.uconv2(x))
 
-        # Arch 3
-        # Encodeur
-        x = F.relu(self.d1(image))
-        x = F.relu(self.d2(x))
-        x = F.relu(self.d3(x))
-        x = F.relu(self.d3point5(x))
-        x = F.relu(self.d4(x))
-        # Décodeur
-        x = F.relu(self.u4(self.upsamp(x)))
-        x = F.relu(self.u3point5(x))
-        x = F.relu(self.u3(self.upsamp(x)))
-        x = F.relu(self.u2(x))
-        x = F.tanh(self.u1(x))
+        elif (self.arch == 2) :
+            # Arch 2
+            # Encodeur
+            x = F.relu(self.d1(image))
+            x = F.relu(self.d2(x))
+            x = F.relu(self.d3(x))
+            x = F.relu(self.d4(x))
+            # Décodeur
+            x = F.relu(self.u4(self.upsamp(x)))
+            x = F.relu(self.u3(self.upsamp(x)))
+            x = F.relu(self.u2(x))
+            x = F.tanh(self.u1(x))
 
-        # # Arch 4
-        # # Encodeur
-        # x = F.relu(self.d1(image))
-        # x = F.relu(self.d2(x))
-        # x = F.relu(self.d3(x))
-        # x = F.relu(self.d3point5(x))
-        # x = F.relu(self.d4point5(x))
-        #
-        # # Décodeur
-        # x = F.relu(self.u4point5(x))
-        # x = F.relu(self.u3point5(x))
-        # x = F.relu(self.u3(self.upsamp(x)))
-        # x = F.relu(self.u2(x))
-        # x = F.tanh(self.u1(x))
+        elif (self.arch == 3) :
+            # Arch 3
+            # Encodeur
+            x = F.relu(self.d1(image))
+            x = F.relu(self.d2(x))
+            x = F.relu(self.d3(x))
+            x = F.relu(self.d3point5(x))
+            x = F.relu(self.d4(x))
+            # Décodeur
+            x = F.relu(self.u4(self.upsamp(x)))
+            x = F.relu(self.u3point5(x))
+            x = F.relu(self.u3(self.upsamp(x)))
+            x = F.relu(self.u2(x))
+            x = F.tanh(self.u1(x))
 
+        elif (self.arch == 4) :
+            # Arch 4
+            # Encodeur
+            x = F.relu(self.d1(image))
+            x = F.relu(self.d2(x))
+            x = F.relu(self.d3(x))
+            x = F.relu(self.d3point5(x))
+            x = F.relu(self.d4point5(x))
+
+            # Décodeur
+            x = F.relu(self.u4point5(x))
+            x = F.relu(self.u3point5(x))
+            x = F.relu(self.u3(self.upsamp(x)))
+            x = F.relu(self.u2(x))
+            x = F.tanh(self.u1(x))
 
         return x
 
@@ -188,10 +191,10 @@ def valid(model, valid_loader, epoch) :
         output = model(data)
         valid_loss += nn.MSELoss()(output, data)
     valid_loss /= len(valid_loader.dataset)
-    pic = to_img(data.cpu().data)
-    save_image(pic, './dc_img/NewvalidimageInput_{}.png'.format(epoch))
-    outpic = to_img(output.cpu().data)
-    save_image(outpic, './dc_img/NewvalidimageOutput_{}.png'.format(epoch))
+    #pic = to_img(data.cpu().data)
+    #save_image(pic, './dc_img/NewvalidimageInput_{}.png'.format(epoch))
+    #outpic = to_img(output.cpu().data)
+    #save_image(outpic, './dc_img/NewvalidimageOutput_{}.png'.format(epoch))
     return valid_loss.data[0] * 100000
 
 def test(model, test_loader, noise):
@@ -218,7 +221,9 @@ def experiment(model, epochs=nombre_epochs, lr=le_ra):
     losses = []
     v_losses = []
 
-    optimizer = optim.Adam(model.parameters(), lr=lr)
+    #optimizer = optim.Adam(model.parameters(), lr=lr)
+    optimizer = optim.SGD(model.parameters(), lr=lr)
+
 
     for epoch in range(1, epochs + 1):
         model, epoch_loss = train(model, train_loader, optimizer, epoch)
@@ -240,7 +245,7 @@ def experiment(model, epochs=nombre_epochs, lr=le_ra):
 # Main
 best_loss = 0
 best_model = []
-for model in [FcNetwork()] :
+for model in [FcNetwork(3)] :
     model.cuda()
     best_model, best_loss = experiment(model)
     # if precision > best_precision:
