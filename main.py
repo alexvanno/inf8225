@@ -4,7 +4,6 @@ from torch.autograd import Variable
 import torchvision
 import torch.nn.functional as F
 import torchvision.datasets as ds
-#from fashion import FashionMNIST
 import torchvision.transforms as transforms
 from torchvision.utils import save_image
 from torch import nn
@@ -23,25 +22,18 @@ train_set = ds.MNIST(root=root, train=True, transform=trans, download=download)
 valid_set = ds.MNIST(root=root, train=True, transform=trans, download=download)
 test_set = ds.MNIST(root=root, train=False, transform=trans)
 
-# From https://gist.github.com/kevinzakka/d33bf8d6c7f06a9d8c76d97a7879f5cb
-
 batch_size = 100
 valid_batch_size = 100
 test_batch_size = 50
-
 le_ra = 0.000001
 nombre_epochs = 200
 
-oneall = (torch.ones(10000)).byte()
-sampler = (torch.round(torch.rand(10000))).byte()
-
 num_train = len(train_set)
-indices = list(range(num_train))
-split = int(np.floor(0.25 * num_train))
+indices_split = list(range(num_train))
+split = int(np.floor(0.25 * num_train)) #25% of the data is kept for validation
+np.random.shuffle(indices_split)
 
-np.random.shuffle(indices)
-
-train_idx, valid_idx = indices[split:], indices[:split]
+train_idx, valid_idx = indices_split[split:], indices_split[:split]
 train_sampler = SubsetRandomSampler(train_idx)
 valid_sampler = SubsetRandomSampler(valid_idx)
 
@@ -54,7 +46,7 @@ valid_loader = torch.utils.data.DataLoader(valid_set,
 test_loader = torch.utils.data.DataLoader(test_set,
     batch_size=test_batch_size, shuffle=True)
 
-# Utility function to transform an image
+# Utility function to transform data in a data struc that can be saved as an image
 def to_img(x):
     x = 0.5 * (x+1)
     x = x.clamp(0,1)
@@ -92,7 +84,7 @@ class FcNetwork(nn.Module):
         self.u2 = nn.ConvTranspose2d(16, 8, kernel_size=3, padding=0)
         self.u1 = nn.ConvTranspose2d(8, 1, kernel_size=3, padding=0)
 
-        # Arch 3 (ajouts dans le milieu de la couche)
+        # Arch 3
         self.d3point5 = nn.Conv2d(32, 32, kernel_size=3, padding=0)
         self.u3point5 = nn.ConvTranspose2d(32, 32, kernel_size=3, padding=0)
 
@@ -102,9 +94,6 @@ class FcNetwork(nn.Module):
         self.u4point5 = nn.ConvTranspose2d(32, 32, kernel_size=3, padding=0)
         self.u5point5 = nn.ConvTranspose2d(32, 32, kernel_size=3, padding=0)
 
-
-
-#A mettre quand on herite __init__ __len__ __getItem__
     def forward(self, image):
         if (self.arch == 1) :
             # Arch 1
@@ -170,7 +159,7 @@ def train(model, train_loader, optimizer, epoch):
     for batch_idx, (data, target) in enumerate(train_loader):
         data = Variable(data).cuda()
         optimizer.zero_grad()
-        output = model(data)  # calls the forward function
+        output = model(data)
         loss = nn.MSELoss()(output, data)
         epoch_loss += loss
         loss.backward()
@@ -180,7 +169,7 @@ def train(model, train_loader, optimizer, epoch):
     save_image(pic, 'NewimageInput_{}.png'.format(epoch))
     outpic = to_img(output.cpu().data)
     save_image(outpic, 'NewimageOutput_{}.png'.format(epoch))
-    return model, epoch_loss.data[0] * 100000
+    return model, epoch_loss.data[0] * 100000 # 100000 or else the number is too small
 
 def valid(model, valid_loader, epoch) :
     model.eval()
@@ -190,11 +179,7 @@ def valid(model, valid_loader, epoch) :
         output = model(data)
         valid_loss += nn.MSELoss()(output, data)
     valid_loss /= len(valid_loader.dataset)
-    #pic = to_img(data.cpu().data)
-    #save_image(pic, './dc_img/NewvalidimageInput_{}.png'.format(epoch))
-    #outpic = to_img(output.cpu().data)
-    #save_image(outpic, './dc_img/NewvalidimageOutput_{}.png'.format(epoch))
-    return valid_loss.data[0] * 100000
+    return valid_loss.data[0] * 100000 # 100000 or else the number is too small
 
 def test(model, test_loader, noise):
     model.eval()
@@ -203,7 +188,7 @@ def test(model, test_loader, noise):
         test_data = Variable(test_data, volatile=True).cuda()
         pic = to_img(test_data.cpu().data)
         save_image(pic, 'test_imageOriginalInput.png')
-        if noise :
+        if noise:
             test_data = test_data + Variable(torch.randn(test_data.size()) * 1).cuda()
         output = model.forward(test_data)
         test_loss += nn.MSELoss()(output, test_data).data[0]
@@ -211,8 +196,7 @@ def test(model, test_loader, noise):
         save_image(pic, 'test_imageOutput.png')
         pic = to_img(test_data.cpu().data)
         save_image(pic, 'test_imageInput.png')
-    return (test_loss / len(train_loader.dataset))
-    #return test_loss
+    return test_loss / len(test_loader.dataset)
 
 def experiment(model, epochs=nombre_epochs, lr=le_ra):
     best_loss = 1000000
@@ -243,7 +227,7 @@ def experiment(model, epochs=nombre_epochs, lr=le_ra):
 # Main
 best_loss = 0
 best_model = []
-for model in [FcNetwork(3)] :
+for model in [FcNetwork(3)]:
     model.cuda()
     best_model, best_loss = experiment(model)
 test_loss = test(model, test_loader, noise=True)
