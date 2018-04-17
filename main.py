@@ -177,9 +177,9 @@ def train(model, train_loader, optimizer, epoch):
         optimizer.step()
     epoch_loss /= len(train_loader.dataset)
     pic = to_img(data.cpu().data)
-    save_image(pic, './dc_img/NewimageInput_{}.png'.format(epoch))
+    save_image(pic, 'NewimageInput_{}.png'.format(epoch))
     outpic = to_img(output.cpu().data)
-    save_image(outpic, './dc_img/NewimageOutput_{}.png'.format(epoch))
+    save_image(outpic, 'NewimageOutput_{}.png'.format(epoch))
     return model, epoch_loss.data[0] * 100000
 
 def valid(model, valid_loader, epoch) :
@@ -202,15 +202,15 @@ def test(model, test_loader, noise):
     for test_data, _ in test_loader:
         test_data = Variable(test_data, volatile=True).cuda()
         pic = to_img(test_data.cpu().data)
-        save_image(pic, './dc_img/test_imageOriginalInput.png')
+        save_image(pic, 'test_imageOriginalInput.png')
         if noise :
             test_data = test_data + Variable(torch.randn(test_data.size()) * 1).cuda()
         output = model.forward(test_data)
         test_loss += nn.MSELoss()(output, test_data).data[0]
         pic = to_img(output.cpu().data)
-        save_image(pic, './dc_img/test_imageOutput.png')
+        save_image(pic, 'test_imageOutput.png')
         pic = to_img(test_data.cpu().data)
-        save_image(pic, './dc_img/test_imageInput.png')
+        save_image(pic, 'test_imageInput.png')
     return (test_loss / len(train_loader.dataset))
     #return test_loss
 
